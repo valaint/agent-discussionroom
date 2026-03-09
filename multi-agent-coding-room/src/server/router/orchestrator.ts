@@ -5,6 +5,7 @@ import { roomStore } from '../store/room-store.js';
 import { parseProtocolMessage } from '../../shared/protocol.js';
 import { MockProvider } from '../providers/mock/mock-provider.js';
 import { db } from '../store/db.js';
+import { agentStore } from '../store/agent-store.js';
 import { randomUUID } from 'crypto';
 
 export class Orchestrator {
@@ -18,7 +19,7 @@ export class Orchestrator {
   }
 
   private loadAgents() {
-    const rows = db.prepare(`SELECT * FROM agents`).all() as any[];
+    const rows = agentStore.getAgents();
     for (const row of rows) {
       this.registerAgent(row);
     }

@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { db } from './store/db.js';
+import { agentStore } from './store/agent-store.js';
 import { Orchestrator } from './router/orchestrator.js';
 import { roomStore } from './store/room-store.js';
 import { messageStore } from './store/message-store.js';
@@ -36,6 +37,14 @@ if (existingAgents.c === 0) {
 }
 
 // REST endpoints
+app.put('/api/agents/:id/enabled', (req, res) => {
+  const { enabled } = req.body;
+  agentStore.updateAgentEnabled(req.params.id, enabled);
+  const updated = agentStore.getAgents().find(a => a.id === req.params.id);
+  if (updated) orchestrator.registerAgent(updated);
+  res.json({ success: true, enabled });
+});
+
 app.get('/api/agents', (req, res) => {
   res.json(orchestrator.getAgents());
 });

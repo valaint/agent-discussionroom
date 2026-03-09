@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useStore } from '../store/useStore.js';
 import { RoomMessage } from '../../shared/schemas.js';
-import { Send, CheckCircle2, Clock } from 'lucide-react';
+import { Send, CheckCircle2, Clock, Download, FileJson } from 'lucide-react';
 import clsx from 'clsx';
 import { v4 as uuidv4 } from 'uuid';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 let socket: Socket | null = null;
 
@@ -12,6 +14,8 @@ export function ChatArea() {
   const { currentRoom, messages, setMessages, addMessage, agents, setAgentStatus } = useStore();
   const [input, setInput] = useState('');
   const [target, setTarget] = useState<string | 'all'>('all');
+  const [filterSender, setFilterSender] = useState<string>('all');
+  const [filterType, setFilterType] = useState<string>('all');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showRaw, setShowRaw] = useState<Record<string, boolean>>({});
 
@@ -50,6 +54,28 @@ export function ChatArea() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+
+  const exportAsJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(messages, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `transcript-${currentRoom?.id}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const exportAsMarkdown = () => {
+    const md = messages.map(m => `**${m.from} &rarr; ${m.to || 'all'}** [${new Date(m.timestamp).toISOString()}]\n\n${m.body}\n\n---`).join('\n\n');
+    const dataStr = "data:text/markdown;charset=utf-8," + encodeURIComponent(md);
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `transcript-${currentRoom?.id}.md`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
   const handleSend = () => {
     if (!input.trim() || !currentRoom || !socket) return;
 
@@ -79,11 +105,35 @@ export function ChatArea() {
     <div className="flex-1 flex flex-col bg-gray-950">
       <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900">
         <h2 className="font-semibold text-gray-200">{currentRoom.title}</h2>
-        <div className="text-sm text-gray-400">ID: {currentRoom.id.substring(0, 8)}</div>
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-gray-400">ID: {currentRoom.id.substring(0, 8)}</div>
+
+        <div className="flex space-x-2">
+          <button onClick={exportAsJSON} className="p-1 text-gray-400 hover:text-white" title="Export JSON"><FileJson size={18} /></button>
+          <button onClick={exportAsMarkdown} className="p-1 text-gray-400 hover:text-white" title="Export Markdown"><Download size={18} /></button>
+        </div>
+
+        </div>
+      </div>
+
+
+      <div className="p-2 bg-gray-900 border-b border-gray-800 flex space-x-4 text-sm">
+        <select value={filterSender} onChange={e => setFilterSender(e.target.value)} className="bg-gray-800 border border-gray-700 text-gray-300 rounded p-1">
+          <option value="all">All Senders</option>
+          <option value="user">User</option>
+          {agents.map(a => <option key={a.id} value={a.id}>{a.displayName}</option>)}
+        </select>
+        <select value={filterType} onChange={e => setFilterType(e.target.value)} className="bg-gray-800 border border-gray-700 text-gray-300 rounded p-1">
+          <option value="all">All Types</option>
+          <option value="CHAT">CHAT</option>
+          <option value="REVIEW">REVIEW</option>
+          <option value="IMPLEMENTATION">IMPLEMENTATION</option>
+          <option value="BROADCAST">BROADCAST</option>
+        </select>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map(msg => {
+        {messages.filter(m => (filterSender === 'all' || m.from === filterSender) && (filterType === 'all' || m.type === filterType)).map(msg => {
           const isUser = msg.from === 'user';
           const senderName = isUser ? 'You' : agents.find(a => a.id === msg.from)?.displayName || msg.from;
           const targetName = msg.to === 'all' ? 'All Agents' : agents.find(a => a.id === msg.to)?.displayName || msg.to || 'Unknown';
@@ -97,7 +147,9 @@ export function ChatArea() {
               </div>
               <div className={clsx('p-3 rounded-lg', isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-800 text-gray-200 rounded-tl-none')}>
                 {msg.subject && <div className="font-semibold text-sm mb-1">{msg.subject}</div>}
-                <div className="whitespace-pre-wrap text-sm font-mono">{msg.body}</div>
+                <div className="text-sm markdown-body prose prose-invert max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.body}</ReactMarkdown>
+                </div>
 
                 <button
                   onClick={() => setShowRaw(prev => ({...prev, [msg.id]: !prev[msg.id]}))}
