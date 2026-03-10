@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import { RoomMessage, RoomEvent, AgentRegistration } from '../../shared/schemas.js';
+import { RoomMessage, AgentRegistration } from '../../shared/schemas.js';
 import { messageStore } from '../store/message-store.js';
 import { roomStore } from '../store/room-store.js';
 import { parseProtocolMessage } from '../../shared/protocol.js';
