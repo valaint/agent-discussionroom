@@ -1,14 +1,14 @@
 import React from 'react';
 import { useStore } from '../store/useStore.js';
 import { Plus } from 'lucide-react';
-import { randomUUID } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 export function RoomList() {
   const { rooms, currentRoom, setCurrentRoom, setRooms, agents } = useStore();
 
   const handleCreateRoom = async () => {
     const room = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       title: `Room ${rooms.length + 1}`,
       description: 'A new coding session',
       createdAt: Date.now(),

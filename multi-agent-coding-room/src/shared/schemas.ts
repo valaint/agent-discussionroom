@@ -35,7 +35,7 @@ export const RoomMessageSchema = z.object({
   type: RoomMessageTypeSchema,
   subject: z.string().optional(),
   body: z.string(),
-  attachments: z.record(z.any()).optional(),
+  attachments: z.record(z.string(), z.any()).optional(),
   correlationId: z.string().uuid().optional(),
   priority: z.enum(['LOW', 'NORMAL', 'HIGH']).optional(),
 });
@@ -48,7 +48,7 @@ export const RoomEventSchema = z.object({
   type: z.enum(['agent_joined', 'agent_left', 'user_joined', 'user_left', 'room_closed']),
   timestamp: z.number(),
   roomId: z.string().uuid(),
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
 });
 
 export const ExecutionPlanSchema = z.object({
