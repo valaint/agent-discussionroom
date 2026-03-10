@@ -14,9 +14,24 @@ export const roomStore = {
 
   getRooms(): Room[] {
     const rows = db.prepare(`SELECT * FROM rooms`).all() as any[];
+
+    // Fetch all room_agents in one query to avoid N+1 problem
+    const agentsRows = db.prepare(`SELECT roomId, agentId FROM room_agents`).all() as { roomId: string, agentId: string }[];
+
+    // Group agents by roomId
+    const agentsByRoom = new Map<string, string[]>();
+    for (const row of agentsRows) {
+      const agents = agentsByRoom.get(row.roomId);
+      if (agents) {
+        agents.push(row.agentId);
+      } else {
+        agentsByRoom.set(row.roomId, [row.agentId]);
+      }
+    }
+
     return rows.map(r => ({
       ...r,
-      activeAgents: db.prepare(`SELECT agentId FROM room_agents WHERE roomId = ?`).all(r.id).map((a: any) => a.agentId)
+      activeAgents: agentsByRoom.get(r.id) || []
     }));
   },
 
